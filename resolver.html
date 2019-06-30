@@ -49,7 +49,18 @@
 			'..2...1..',
 			'3.4......'];
 			
-			grille=grilleExpert;
+		var grilleExpert2 =[
+			'.17..23..',
+			'2..86..4.',
+			'......79.',
+			'.4.5.....',
+			'...12...9',
+			'..5....2.',
+			'.69.....5',
+			'....8.6..',
+			'.2.4.....'];
+		
+		grille=grilleExpert2;
 		// Duplicate array
 		var grilleDepart = grille.slice();
 			
@@ -206,13 +217,12 @@ var solcase = [[]];
 				var digit = counters.findIndex(value => value == 1);
 				if (digit != -1) {
 					// Reste à retrouver la case qui proposait seule cette valeur
-					//console.log("On a trouvé un "+digit+" pour x="+ (x) + " et y="+(y));
 					for (var j=0;j<3;j++) {
 						for (var i=0;i<3;i++) {
 							if (solcase[y+j][x+i].indexOf(digit) != -1) {
-							//console.log("case = "+(x+i)+","+(y+j)+" avec solcase= "+solcase[y+j][x+i]);
-							grille[y+j] = setCharAt(grille[y+j], x+i,digit);
-							found = true;
+								//console.log("case = "+(x+i)+","+(y+j)+" avec solcase= "+solcase[y+j][x+i]);
+								grille[y+j] = setCharAt(grille[y+j], x+i,digit);
+								found = true;
 							}
 						}
 					}
@@ -220,29 +230,44 @@ var solcase = [[]];
 				
 				if (!found) {	
 					// On check si un chiffre n'apparait que 2 fois pour identifier une colonne/ligne
-					var digit = counters.findIndex(value => value == 2);
-					if (digit != -1) {
-						console.log("On a trouvé le "+digit+" qui apparait 2 fois dans la région "+r);
-						var cases = [];
-						for (var j=0;j<3;j++) {
-							for (var i=0;i<3;i++) {
-								if (solcase[y+j][x+i].indexOf(digit) != -1) {
-									cases.push( {'x': x+i, 'y': y+j} );
+					for (var idx=0;idx<counters.length;idx++) {
+						if (counters[idx]==2) {
+							digit = idx;
+							console.log("On a trouvé le "+digit+" qui apparait 2 fois dans la région "+r+" x="+x);
+							var cases = [];
+							for (var j=0;j<3;j++) {
+								for (var i=0;i<3;i++) {
+									if (grille[y+j][x+i] == '.' && solcase[y+j][x+i].indexOf(digit) != -1) {
+									console.log("y="+(y+j) +" - x="+(x+i));
+										cases.push( {'x': x+i, 'y': y+j} );
+									}
 								}
 							}
-						}
-						if (cases[0].x == cases[1].x) {
-							console.log("même colonne ! ==> on le supprime sur toute la colonne sauf là");
-							var x = cases[0].x;
-							for (var i=0;i<9;i++) {
-								if (i != cases[0].y)
-									solcase[y][x] = solcase[y][x].filter( v=> v != digit);
+							if (cases[0].x == cases[1].x) {
+								console.log("même colonne ! ==> on le supprime sur toute la colonne sauf là cases="+JSON.stringify(cases));
+								var xx = cases[0].x;
+								for (var i=0;i<9;i++) {
+									if (i != cases[0].y && i != cases[1].y && grille[i][xx] == '.') {
+										console.log("on enleve le "+digit+" sur la case ("+xx+","+i);
+										solcase[i][xx] = solcase[i][xx].filter( v=> v != digit);
+									}
+								}
+							}
+							if (cases[0].y == cases[1].y) {
+								console.log("même ligne ! ==> on le supprime sur toute la ligne sauf là (TODO)");
+								/*
+								var yy = cases[0].y;
+								for (var i=0;i<9;i++) {
+									if (i != cases[0].x && i != cases[1].x && grille[yy][i] == '.') {
+										console.log("on enleve le "+digit+" sur la case ("+i+","+yy);
+										solcase[yy][i] = solcase[yy][i].filter( v=> v != digit);
+										console.log("solcase="+solcase[yy][i]);
+									}
+								}
+								*/
 							}
 						}
-						if (cases[0].y == cases[1].y) {
-							console.log("même ligne ! ==> on le supprime sur toute la ligne sauf là");
-						}
-					}
+					};
 				}
 			}
 			
@@ -473,6 +498,5 @@ var solcase = [[]];
 		<div id="grille" style="font-size:25px;letter-spacing:40px;line-height:40px"></div>
 		
 		<button name="resolve" onclick="resolve()">Resolve !</button>
-		
 	</body>
 </html>
