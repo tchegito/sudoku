@@ -1,0 +1,43 @@
+:root {
+    --gray: #aaaaaa;
+}
+
+#grille > table > tbody > tr > td {
+    color: #9A3BE2;
+    font-size:25px;
+    line-height:40px;
+/*    letter-spacing:40px;
+    padding-left:40px; */
+    width:45px;
+    text-align:center;
+}
+
+#grille {
+    margin: auto;
+    display: flex;
+    justify-content: center;
+}
+
+#grille table {
+    border: 3px solid black;
+    border-collapse: collapse;
+}
+
+.normalCell {
+    border-left: 1px solid black;
+    border-bottom: 1px solid var(--gray);
+}
+.leftCell {
+    border-left: 3px solid black;
+    border-bottom: 1px solid var(--gray);
+}
+
+tr.bottomCell td {
+    border-bottom: 3px solid black;
+}
+
+hr {
+    height: 3px;
+    border:none;
+    background-color:black;
+}
