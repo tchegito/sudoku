@@ -6,7 +6,7 @@
 		<link rel="stylesheet" type="text/css" href="sudoku.css">
 	 </head>
 
-	<body onload="displayGrille()">
+	<body onload="displayGrille(currentGrille)">
 	<h1>
 		Bienvenue dans Sudoku Resolver !
 	</h1>
@@ -14,6 +14,6 @@
 		
 		<div id="grille"></div>
 		
-		<button name="resolve" onclick="resolve()">Resolve !</button>
+		<button name="resolve" onclick="resolve(currentGrille)">Resolve !</button>
 	</body>
 </html>

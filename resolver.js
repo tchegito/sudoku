@@ -1,9 +1,9 @@
-grille=grilleExpert2;
+currentGrille=grilleExpert3;
 // Duplicate array
-var grilleDepart = grille.slice();
+var grilleDepart = currentGrille.slice();
 
 // Renvoie l'ensemble des digits manquant sur une ligne
-function findOnLine(line) {
+function findOnLine(grille, line) {
     var already =[];
     for (var i=0;i<9;i++) {
         var digit = grille[line][i];
@@ -13,7 +13,7 @@ function findOnLine(line) {
 }
 
 // Renvoie l'ensemble des digits manquant sur une colonne
-function findOnColumn(col) {
+function findOnColumn(grille, col) {
     var already =[];
     for (var i=0;i<9;i++) {
         var digit = grille[i][col];
@@ -37,7 +37,7 @@ function getRegionCoords(reg) {
     return [x,y];
 }
 
-function findOnRegion(reg) {
+function findOnRegion(grille, reg) {
     var coords = getRegionCoords(reg);
     var x = coords[0];
     var y = coords[1];
@@ -45,34 +45,34 @@ function findOnRegion(reg) {
     for (var i=0;i<3;i++) {
         for (var j=0;j<3;j++) {
             var digit = grille[y+j][x+i];
-            if (digit != '.') already.push(parseInt(digit));
+            if (digit !== '.') already.push(parseInt(digit));
         }
     }
     return buildMissing(already);
 }
 
-function displayGrille() {
+function displayGrille(grille) {
     var myDiv = document.getElementById('grille');
     var content = "";
     content += "<table>";
     for (var y=0;y<9;y++) {
-        var styleClass = (y == 2 || y == 5 ? 'bottomCell' : '');
+        var styleClass = (y === 2 || y === 5 ? 'bottomCell' : '');
         content += "<tr class='" + styleClass + "'>";
         for (var x=0;x<9;x++) {
-            styleClass = x % 3 == 0 ? 'leftCell' : 'normalCell';
+            styleClass = x % 3 === 0 ? 'leftCell' : 'normalCell';
             content += "<td class='" + styleClass + "'>";
             var style = '';
-            if (grille[y].charAt(x) != grilleDepart[y].charAt(x)) {
+            if (grille[y].charAt(x) !== grilleDepart[y].charAt(x)) {
                 style="<span style='color:#4466ff'>";
             }
             content += style;
             var value = grille[y].charAt(x)
-            if (dispCandidats && value == '.') {
+            if (dispCandidats && value === '.') {
                 content += "<span style='letter-spacing:0px'>("+solcase[y][x]+")</span>";
             } else {
                 content += value;
             }
-            if (style != '') content += '</span>';
+            if (style !== '') content += '</span>';
             content += "</td>";
         }
         content += "</tr>";
@@ -94,16 +94,16 @@ function setCharAt(str,index,chr) {
 // En global pour debugger plus facilement
 var solcase = [[]];
 
-function resolve() {
+function resolve(grille) {
     var solLines = [];
     var solColumns = [];
     var solRegions = [];
     for (var i=0;i<9;i++)
-        solLines.push(findOnLine(i));
+        solLines.push(findOnLine(grille, i));
     for (var i=0;i<9;i++)
-        solColumns.push(findOnColumn(i));
+        solColumns.push(findOnColumn(grille, i));
     for (var i=0;i<9;i++)
-        solRegions.push(findOnRegion(i));
+        solRegions.push(findOnRegion(grille, i));
 
     // Now we cross results
 
@@ -266,12 +266,13 @@ function resolve() {
     }
 
     // 5è tentative: si on a un digit sur 2 emplacements possibles d'une ligne, on tente
+    // (=choix multiple avec 1 coup futur)
     if (!found) {
         var bonnePosition=[];
         for (var y=0;y<9 && bonnePosition.length != 1;y++) {
             if (solLines[y].length <= 2) {
                 // On tente chaque digit à chaque endroit
-                var holes = findHolesLine(y);
+                var holes = findHolesLine(grille, y);
                 console.log("élimination sur ligne "+y);
                 for (var i=0;i<solLines[y].length && bonnePosition.length != 1;i++) {
                     var d = solLines[y][i];
@@ -301,7 +302,7 @@ function resolve() {
         for (var x=0;x<9 && bonnePosition.length != 1;x++) {
             if (solColumns[x].length <= 2) {
                 // On tente chaque digit à chaque endroit
-                var holes = findHolesColumn(x);
+                var holes = findHolesColumn(grille, x);
                 console.log("élimination sur colonne "+x+" holes="+holes);
                 for (var i=0;i<solColumns[x].length && bonnePosition.length != 1;i++) {
                     var d = solColumns[x][i];
@@ -328,14 +329,186 @@ function resolve() {
         }
     }
 
+    if (!found) {
+        // Paires exclusives
+        var unusedPair;
+        var unusedLocs;
+        for (var r=0;r<9;r++) {
+            var coords = getRegionCoords(r);
+            var x = coords[0];
+            var y = coords[1];
+            var doubleCandidates = new Map();
+            for (var b=0;b<3;b++) {
+                for (var a=0;a<3;a++) {
+                    var xx = a+x;
+                    var yy = b+y;
+                    if (solcase[yy][xx].length == 2) {
+                        doubleCandidates.set(yy+","+xx, solcase[yy][xx]);
+                    }
+                }
+            }
+            if (doubleCandidates.size > 1) {
+                // On cherche si une même paire apparait 2 fois
+                var cnts = new Map();
+                for (var [key, value] of doubleCandidates.entries()) {
+                    var valStr = value.toString();  // "value" est un Array
+                    var c = 1 + (cnts.get(valStr) || 0);
+                    cnts.set(valStr, c);
+                }
+                for (var [paire, value] of cnts.entries()) {
+                    if (value == 2) {
+                        // On a trouvé une paire de candidats en double !
+
+                        // On a trouvé 2 cases dans la région qui ont le même couple de candidats
+                        // ==> on teste avec chaque case restante de la région
+                        for (var b=0;b<3;b++) {
+                            for (var a=0;a<3;a++) {
+                                var xx = a+x;
+                                var yy = b+y;
+                                var key = yy+","+xx;
+                                var cand = solcase[yy][xx];
+                                if (cand != "" && paire !== undefined && cand != paire) {
+                                    cand = cand.filter(f => paire.indexOf(f) == -1);
+                                    if (cand.length == 1) {
+                                        //alert('paire exclusive en '+xx+','+yy+' !'+cand);
+                                        grille[yy] = setCharAt(grille[yy], xx,cand.pop());
+                                        found = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        // ==> les 2 paires sont sur une même ligne/colonne ?
+                        var locs =[];
+                        for (var b=0;b<3;b++) {
+                            for (var a=0;a<3;a++) {
+                                var xx = a+x;
+                                var yy = b+y;
+                                if (solcase[yy][xx] == paire) {
+                                    locs.push({"x": xx, "y": yy});
+                                }
+                            }
+                        }
+                        console.log(locs);
+                        if (locs[0].x == locs[1].x) {
+                            console.log("même colonne ! on cherche a éliminer la paire "+paire);
+                            // On check sur toute la colonne si les cases restantes peuvent se solutionner
+                            var xx = locs[0].x;
+                            for (var b=0;b<9;b++) {
+                                var cand = solcase[b][xx];
+                                if (cand != "" && cand != paire) {
+                                    cand = cand.filter(f => paire.indexOf(f) == -1);
+                                    if (cand.length == 1) {
+                                        //alert('paire exclusive en '+xx+','+b+' !'+cand);
+                                        grille[b] = setCharAt(grille[b], xx,cand.pop());
+                                        found = true;
+                                    }
+                                }
+                            }
+                        } else if (locs[0].y == locs[1].y) {
+                            console.log("même ligne ! on cherche a éliminer la paire "+paire);
+                            // On check sur toute la colonne si les cases restantes peuvent se solutionner
+                            var yy = locs[0].y;
+                            for (var a=0;a<9;a++) {
+                                var cand = solcase[yy][a];
+                                if (cand != "" && cand != paire) {
+                                    cand = cand.filter(f => paire.indexOf(f) == -1);
+                                    if (cand.length == 1) {
+                                        //alert('paire exclusive en '+a+','+yy+' !'+cand);
+                                        grille[yy] = setCharAt(grille[yy], a,cand.pop());
+                                        found = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (!found) {
+                            unusedPair = paire;
+                            unusedLocs = locs;
+                        }
+
+
+                    }
+                }
+
+
+            }
+
+        }
+        if (!found && unusedPair !== undefined) {
+            // On tente un choix au hasard pour voir (sauf si on est déjà en backtrack)
+            var g2 = grille.slice();
+            setCase(g2, unusedLocs[0].x, unusedLocs[0].y, unusedPair[0]);
+            setCase(g2, unusedLocs[1].x, unusedLocs[1].y, unusedPair[2]);
+
+            displayGrille(g2);
+            console.log("on tente un choix multiple avec la paire" + unusedPair[0]+" et "+unusedPair[2]);
+
+            var valid = true;
+            while (valid) {
+                valid = estValide(g2);
+                if (valid) {
+                    var isDone = resolve(g2);
+                    valid = estValide(g2);
+                    if (isDone && valid)
+                        return true;
+                }
+            }
+            if (!valid) {   // C'est donc l'autre choix qui est bon !
+                console.log('erreur ! on intervertit '+unusedPair);
+                setCase(grille, unusedLocs[0].x, unusedLocs[0].y, unusedPair[2]);
+                setCase(grille, unusedLocs[1].x, unusedLocs[1].y, unusedPair[0]);
+            }
+            found = true;
+        }
+    }
+
     if (found) {
-        displayGrille();
+		if (!estValide(grille)) {
+			console.log('Grille incohérente !');
+			return false;
+		}
+        displayGrille(grille);
     } else {
         alert('rien trouvé ! ');
     }
+    return isComplete(grille) && estValide(grille);
 }
 
-function findHolesLine(line) {
+function isComplete(grille) {
+    var setsColonne = new Array();
+    for (var y=0;y<9;y++) {
+        setsColonne[y] = new Set();
+    }
+
+    // Iterate over each lines and rows to check if 9 digits are found
+    for (var y=0;y<9;y++) {
+        var setLigne = new Set();
+        for (var x=0;x<9;x++) {
+            if (grille[y][x] == '.') {
+                return false;
+            } else {
+                setLigne.add(grille[y][x]);
+                setsColonne[y].add(grille[y][x]);
+            }
+        }
+        if (setLigne.size != 9) {
+            return false;
+        }
+    }
+
+    for (var y=0;y<9;y++) {
+        if (setsColonne[y].size != 9) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function setCase(grille, x, y, val) {
+    grille[y] = setCharAt(grille[y], x, val);
+}
+
+function findHolesLine(grille, line) {
     var result = [];
     for (var x=0;x<9;x++) {
         if (grille[line][x] == '.')	result.push(x);
@@ -343,7 +516,7 @@ function findHolesLine(line) {
     return result;
 }
 
-function findHolesColumn(col) {
+function findHolesColumn(grille, col) {
     var result = [];
     for (var y=0;y<9;y++) {
         if (grille[y][col] == '.')	result.push(y);
@@ -420,6 +593,6 @@ var dispCandidats = false;
 
 function displayCandidats() {
     dispCandidats = !dispCandidats;
-    displayGrille();
+    displayGrille(currentGrille);
 }
 
